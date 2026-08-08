@@ -4,76 +4,107 @@ cd "$(dirname "$0")"
 
 PORT="${EAGLER_LOCAL_PORT:-25565}"
 BIN="$HOME/.local/bin/cloudflared"
+PID_FILE=".tunnel.pid"
+LOG="tunnel.log"
 mkdir -p "$(dirname "$BIN")"
 
-if ! command -v cloudflared >/dev/null 2>&1 && [[ ! -x "$BIN" ]]; then
-  echo "Instalando cloudflared..."
-  ARCH="$(uname -m)"
-  case "$ARCH" in
-    x86_64) URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64" ;;
-    aarch64|arm64) URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64" ;;
-    armv7l) URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm" ;;
-    *) echo "Arquitectura no soportada: $ARCH"; exit 1 ;;
-  esac
-  curl -fL "$URL" -o "$BIN"
-  chmod +x "$BIN"
-fi
+get_cf() {
+  if command -v cloudflared >/dev/null 2>&1; then
+    command -v cloudflared
+    return
+  fi
+  [[ -x "$BIN" ]] || {
+    echo "Instalando cloudflared..."
+    ARCH="$(uname -m)"
+    case "$ARCH" in
+      x86_64) URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64" ;;
+      aarch64|arm64) URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64" ;;
+      armv7l) URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm" ;;
+      *) echo "Arquitectura no soportada: $ARCH"; return 1 ;;
+    esac
+    command -v curl >/dev/null 2>&1 || { echo 'Falta curl. Instálalo con sudo apt install curl.'; return 1; }
+    curl -fL "$URL" -o "$BIN"
+    chmod +x "$BIN"
+  }
+  echo "$BIN"
+}
 
-if command -v cloudflared >/dev/null 2>&1; then
-  CF="$(command -v cloudflared)"
-else
-  CF="$BIN"
-fi
+stop_tunnel() {
+  if [[ -f "$PID_FILE" ]]; then
+    PID="$(cat "$PID_FILE" 2>/dev/null || true)"
+    if [[ "$PID" =~ ^[0-9]+$ ]] && kill -0 "$PID" 2>/dev/null; then
+      kill "$PID" 2>/dev/null || true
+      for _ in {1..10}; do
+        kill -0 "$PID" 2>/dev/null || break
+        sleep 0.2
+      done
+      kill -9 "$PID" 2>/dev/null || true
+    fi
+    rm -f "$PID_FILE"
+  fi
+  rm -f server-url.env PLAYER-LINK.html
+}
 
-echo "Esperando a que EaglerXServer escuche en $PORT..."
-for i in {1..60}; do
+case "${1:-start}" in
+  stop)
+    stop_tunnel
+    echo 'Túnel HTTPS/WSS detenido.'
+    exit 0
+    ;;
+  start)
+    stop_tunnel
+    ;;
+  *)
+    echo "Uso: $0 {start|stop}"
+    exit 2
+    ;;
+esac
+
+CF="$(get_cf)"
+echo "Esperando a que EaglerXServer escuche en 127.0.0.1:$PORT..."
+for _ in {1..60}; do
   if (echo >/dev/tcp/127.0.0.1/$PORT) >/dev/null 2>&1; then break; fi
   sleep 1
 done
-
 if ! (echo >/dev/tcp/127.0.0.1/$PORT) >/dev/null 2>&1; then
   echo "No se pudo detectar el puerto $PORT."
   exit 1
 fi
 
-LOG="tunnel.log"
 rm -f "$LOG"
 "$CF" tunnel --url "http://127.0.0.1:$PORT" >"$LOG" 2>&1 &
 TUNNEL_PID=$!
-echo "$TUNNEL_PID" > .tunnel.pid
+echo "$TUNNEL_PID" > "$PID_FILE"
 
 URL=""
-for i in {1..30}; do
+for _ in {1..30}; do
   URL="$(grep -Eo 'https://[-a-z0-9]+\.trycloudflare\.com' "$LOG" | head -n1 || true)"
   [[ -n "$URL" ]] && break
+  if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then break; fi
   sleep 1
 done
 
 if [[ -z "$URL" ]]; then
-  echo "Não foi possível obter a URL do túnel. Veja tunnel.log."
+  echo "No se pudo obtener la URL del túnel. Revisa tunnel.log."
+  stop_tunnel
   exit 1
 fi
 
 WSS_URL="${URL/https:/wss:}"
-HTTPS_URL="$URL"
-printf '%s\n' "SERVER_HTTPS_URL=$HTTPS_URL" "SERVER_WSS_URL=$WSS_URL" > server-url.env
+printf '%s\n' "SERVER_HTTPS_URL=$URL" "SERVER_WSS_URL=$WSS_URL" > server-url.env
 
 cat > PLAYER-LINK.html <<EOF
 <!doctype html><meta charset="utf-8"><title>Eaglercraft Server</title>
 <h1>Eaglercraft Server</h1>
-<p>HTTPS: <a href="$HTTPS_URL">$HTTPS_URL</a></p>
-<p>WSS: <code>$WSS_URL</code></p>
-<p>En el cliente Eaglercraft usa el endpoint WSS mostrado arriba.</p>
+<p>Endpoint seguro WSS:</p><p><code>$WSS_URL</code></p>
+<p>Este enlace es el endpoint del servidor; necesitas un cliente Eaglercraft compatible para conectarte.</p>
 EOF
 
 echo
-echo "=========================================="
-echo " EAGLERCRAFT — TÚNEL HTTPS/WSS ACTIVO"
-echo "=========================================="
-echo "HTTPS: $HTTPS_URL"
+echo '=========================================='
+echo ' EAGLERCRAFT — HTTPS/WSS ACTIVO'
+echo '=========================================='
+echo "HTTPS: $URL"
 echo "WSS:   $WSS_URL"
-echo
-echo "Comparte el enlace HTTPS o configura el WSS en tu cliente Eaglercraft."
-echo "PID del túnel: $TUNNEL_PID"
-echo "=========================================="
-echo
+echo "PID:   $TUNNEL_PID"
+echo '=========================================='

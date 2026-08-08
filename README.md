@@ -1,10 +1,8 @@
 # Eaglercraft Server para Chromebook Linux
 
-Servidor Eaglercraft para **Linux/Crostini de ChromeOS**, preparado para funcionar en una red local con otros dispositivos.
+Servidor Eaglercraft para **Linux/Crostini de ChromeOS**, preparado para usar HTTPS/WSS mediante un reverse proxy.
 
 ## Instalación rápida
-
-En Terminal de Linux:
 
 ```bash
 sudo apt update
@@ -18,77 +16,86 @@ chmod +x *.sh
 
 El instalador descarga Paper 1.12.2 y la última release de EaglerXServer desde sus fuentes oficiales.
 
-## Red: MUY IMPORTANTE en Chromebook
+## HTTPS + WSS
 
-El servidor puede escuchar correctamente dentro de Linux y aun así ser inaccesible desde otro móvil/PC porque **Crostini está dentro del entorno Linux de ChromeOS**. Esto no se arregla cambiando Minecraft: hay que publicar el puerto de ChromeOS.
-
-Google documenta que ChromeOS tiene **Redirección de puertos / Port forwarding** para permitir que otros dispositivos de la misma red accedan a servidores que se ejecutan dentro de Linux. citeturn1search0
-
-### Para jugar desde otro dispositivo de tu Wi-Fi
-
-1. Arranca Linux/Terminal en el Chromebook.
-2. Ejecuta:
-
-```bash
-./start.sh
-```
-
-3. En ChromeOS abre **Configuración → Desarrolladores → Entorno de desarrollo de Linux → Redirección de puertos**.
-4. Añade:
-   - **Puerto:** `25565`
-   - **Protocolo:** `TCP`
-5. Déjalo activado mientras el servidor esté funcionando.
-6. En **Configuración → Red**, mira la IP del **Chromebook**.
-7. Desde el otro dispositivo usa esa IP y el puerto `25565`.
-
-Ejemplo:
+Para un servidor público y para que el micrófono del navegador pueda funcionar correctamente, la arquitectura recomendada es:
 
 ```text
-192.168.1.50:25565
+Cliente Eaglercraft
+       |
+   HTTPS / WSS
+       |
+   Caddy :443
+       |
+127.0.0.1:25565
+       |
+ EaglerXServer
+       |
+     Paper
 ```
 
-**No uses como dirección para los demás dispositivos la IP interna que muestra `hostname -I` dentro de Crostini.** En la configuración de port forwarding de ChromeOS se utiliza la IP del dispositivo ChromeOS. citeturn1search0
+El repositorio incluye:
 
-### Comprobación automática
+- `Caddyfile.example` — configuración de reverse proxy.
+- `HTTPS-WSS.md` — guía completa de publicación segura.
 
-Antes de arrancar puedes ejecutar:
+### Necesitas
+
+1. Un dominio real, por ejemplo `mc.tudominio.com`.
+2. El DNS del dominio apuntando a tu IP pública.
+3. TCP `443` redirigido en tu router al Chromebook.
+4. Redirección de puertos de ChromeOS si el servicio está dentro de Crostini.
+5. Caddy ejecutándose como reverse proxy.
+
+Caddy obtiene y renueva automáticamente un certificado TLS válido cuando el dominio es accesible públicamente.
+
+Después, el cliente Eaglercraft utiliza un endpoint seguro del tipo:
+
+```text
+wss://mc.tudominio.com
+```
+
+**No uses `ws://` para el endpoint público.**
+
+No es correcto prometer que GitHub puede configurar automáticamente tu router, DNS o NAT: esas partes dependen de tu red.
+
+## Red local de Chromebook
+
+Para jugar desde otro dispositivo de la misma Wi-Fi, ChromeOS puede necesitar su función **Redirección de puertos / Port forwarding** para publicar el servicio Linux. La IP que debes usar para otros dispositivos es la IP del Chromebook, no una IP interna de Crostini.
+
+Si utilizas el proxy HTTPS, la publicación externa es **443/TCP**, no 25565 directamente.
+
+## Diagnóstico
 
 ```bash
 ./network-check.sh
 ```
 
-Comprueba si el puerto 25565 está escuchando y muestra exactamente qué tienes que configurar en ChromeOS.
-
-### El servidor arranca solo cuando hay red
-
-`start.sh` muestra las IP disponibles, comprueba que el puerto 25565 no esté ocupado y fuerza IPv4 para evitar algunos problemas de compatibilidad con clientes/redes antiguas.
-
-## Internet, fuera de tu Wi-Fi
-
-El port forwarding de ChromeOS sirve para publicar el servidor en la red local. Para que alguien pueda conectarse desde otra casa necesitas además una solución de acceso remoto/publicación y, si usas voz en navegador, HTTPS/WSS. No hay una configuración dentro de este repositorio que pueda saltarse el NAT de tu router o las restricciones de ChromeOS.
-
-No recomiendo abrir `25565` directamente a Internet sin protección.
+Comprueba el estado del listener y te ayuda a localizar problemas de red.
 
 ## EaglercraftXServer
 
-EaglerXServer funciona como capa de traducción para que los clientes Eaglercraft utilicen el mismo endpoint del servidor. Su documentación indica soporte para EaglercraftX 1.8, Eaglercraft 1.12.2 y Eaglercraft 1.5.2 mediante los componentes correspondientes. citeturn0search0
+EaglerXServer es la capa de compatibilidad Eaglercraft. Su soporte Bukkit nativo está basado en Paper 1.12.2 y requiere Java 17+.
 
 ## Login: 60 segundos
 
-Después del primer arranque, aplica en la configuración generada por EaglerXServer:
+Después del primer arranque, aplica en `plugins/EaglercraftXServer/settings.cfg`:
 
-```yaml
+```text
 eagler_login_timeout: 60000
 eagler_players_view_distance: 6
 ```
 
-`60000` ms son 60 segundos.
-
-No se sobrescribe automáticamente el archivo generado por EaglerXServer para evitar romper configuraciones entre versiones.
+`60000` ms = 60 segundos.
 
 ## Micrófono / voz
 
-EaglerXServer dispone de API de voz, pero el micrófono depende también del cliente Eaglercraft y del navegador. Para un servidor público utiliza HTTPS/WSS y concede permiso de micrófono al sitio.
+El servidor no puede activar el micrófono físicamente. Para voz necesitas:
+
+- cliente Eaglercraft compatible con voz;
+- permiso de micrófono en Chrome;
+- HTTPS/WSS para un despliegue público;
+- configuración de voz compatible con la versión de EaglerXServer.
 
 ## Plugins
 
@@ -96,7 +103,7 @@ Base:
 
 - EaglerXServer.
 
-Opcionales, instalándolos solo después de comprobar compatibilidad con Paper 1.12.2:
+Opcionales: instala únicamente versiones compatibles con Paper 1.12.2:
 
 - ViaVersion / ViaBackwards / ViaRewind.
 - LuckPerms.
@@ -106,30 +113,39 @@ Opcionales, instalándolos solo después de comprobar compatibilidad con Paper 1
 - EaglerWeb.
 - EaglerXPlan.
 
-No instales versiones modernas al azar en Paper 1.12.2.
-
 ## Rendimiento Chromebook
 
 Empieza con:
 
-- `768M–1536M` de RAM.
+- `768M–1536M` RAM.
 - `view-distance=6`.
 - `simulation-distance=4`.
-- 10 jugadores como máximo inicialmente.
+- 10 jugadores como máximo.
 
-EaglerXServer recomienda reducir la distancia de visión si aparecen errores de conexión en redes de poco ancho de banda. citeturn0search0
+## Seguridad
+
+- No expongas Paper directamente a Internet si puedes mantenerlo detrás de Caddy.
+- Usa HTTPS/WSS.
+- Mantén el dominio y certificados correctamente configurados.
+- Usa whitelist para servidores privados.
+- No des OP innecesariamente.
 
 ## Scripts
 
 - `install.sh` — instala Paper + EaglerXServer.
 - `setup.sh` — prepara el entorno.
-- `start.sh` — arranque con diagnóstico de red.
-- `stop.sh` — detención.
-- `backup.sh` — backup del mundo.
-- `network-check.sh` — diagnóstico de conectividad.
+- `start.sh` — arranca el servidor.
+- `stop.sh` — detiene el servidor.
+- `backup.sh` — backups.
+- `network-check.sh` — diagnóstico de red.
+
+## Documentación
+
+- `HTTPS-WSS.md` — despliegue HTTPS/WSS.
+- `Caddyfile.example` — configuración del proxy.
 
 ## Fuentes
 
 - EaglerXServer: https://github.com/lax1dude/eaglerxserver
 - PaperMC: https://papermc.io/
-- Guía oficial de ChromeOS Port Forwarding: https://developers.google.com/chromeos/app-development/develop/port-forwarding
+- ChromeOS Port Forwarding: https://developers.google.com/chromeos/app-development/develop/port-forwarding

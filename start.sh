@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e
-cd "$(dirname "$0")/server"
-if [ ! -f server.jar ]; then echo 'Falta server/server.jar. Ejecuta ./setup.sh y configura EaglercraftXServer.'; exit 1; fi
-java -Xms768M -Xmx1536M -jar server.jar nogui
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
+[[ -f paper.jar ]] || { echo 'Falta paper.jar. Colócalo en la raíz del repositorio.'; exit 1; }
+exec java -Xms768M -Xmx1536M -XX:+UseG1GC -jar paper.jar nogui

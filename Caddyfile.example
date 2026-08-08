@@ -1,0 +1,12 @@
+# HTTPS/WSS reverse proxy for EaglerXServer
+# Replace example.com with a real DNS name pointing to the server.
+# Caddy automatically obtains and renews a trusted TLS certificate.
+
+example.com {
+    reverse_proxy 127.0.0.1:25565
+}
+
+# IMPORTANT:
+# Do not use this file unchanged. You need a real domain name and DNS A/AAAA record.
+# For a Chromebook on a home network, the router must forward TCP 443 to the Chromebook.
+# ChromeOS Linux port forwarding may also be required for the service inside Crostini.

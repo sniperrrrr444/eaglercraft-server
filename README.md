@@ -2,46 +2,45 @@
 
 Servidor Eaglercraft pensado para ejecutarse en **Linux (Crostini) de ChromeOS**.
 
-> **Importante:** el repositorio contiene scripts y configuración, no redistribuye los archivos propietarios de Minecraft. La instalación descarga las dependencias desde sus proyectos oficiales cuando sea posible.
+La base recomendada es **Paper 1.12.2 + EaglercraftXServer**. EaglerXServer soporta EaglercraftX 1.8, Eaglercraft 1.12.2 y Eaglercraft 1.5.2, y requiere Java 17 o superior. También dispone de infraestructura/API de voz. urlEaglerXServer oficialhttps://github.com/lax1dude/eaglerxserver
 
-## Qué tendrás
+> **Importante:** el repositorio contiene scripts y configuración, pero no redistribuye JARs de Minecraft/Eaglercraft ni plugins de terceros. Esto evita meter binarios no autorizados en GitHub.
 
-- Paper 1.12.2 como base del servidor.
-- EaglercraftXServer para permitir conexiones de clientes Eaglercraft.
-- Configuración optimizada para un Chromebook con recursos limitados.
-- Scripts `setup.sh`, `start.sh` y `stop.sh`.
-- Copias de seguridad del mundo.
+## Qué incluye
+
+- Paper 1.12.2 como servidor backend.
+- Preparación de EaglercraftXServer.
+- Login de EaglerXServer aumentado a **60 segundos** (`60000 ms`). El valor por defecto del proyecto oficial es 10 segundos. citeturn3view0
+- Vista Eaglercraft independiente de **6 chunks** para ahorrar recursos.
+- Compatibilidad de protocolos configurada para Eaglercraft.
+- `setup.sh`, `start.sh`, `stop.sh` y `backup.sh`.
 - Configuración de plugins.
-- Mensaje MOTD y ajustes básicos.
-- Guía de problemas habituales de Linux/ChromeOS.
+- Documentación de voz/micrófono en `VOICE.md`.
+- Plantilla `eaglerxserver-settings.yml.example`.
+- Backups del mundo.
+- Configuración optimizada para Chromebook.
 
 ## 1. Preparar Linux en Chromebook
 
-En ChromeOS activa **Entorno de desarrollo de Linux** y abre la aplicación Terminal.
+Activa **Entorno de desarrollo de Linux** en ChromeOS y abre Terminal.
 
-Comprueba que Java y Git funcionan:
-
-```bash
-java -version
-git --version
-```
-
-Si no tienes Java 17:
+Instala las herramientas:
 
 ```bash
 sudo apt update
 sudo apt install -y openjdk-17-jre-headless git curl wget unzip
 ```
 
-Comprueba Java:
+Comprueba:
 
 ```bash
 java -version
+git --version
 ```
 
-Debe mostrar Java 17 o superior.
+Debe aparecer Java 17 o superior.
 
-## 2. Descargar el servidor
+## 2. Instalar el servidor
 
 ```bash
 git clone https://github.com/sniperrrrr444/eaglercraft-server.git
@@ -50,15 +49,33 @@ chmod +x setup.sh start.sh stop.sh backup.sh
 ./setup.sh
 ```
 
-El instalador crea la estructura necesaria y descarga las dependencias configuradas.
+El instalador prepara las carpetas y crea la configuración recomendada.
 
-## 3. Primer arranque
+Después coloca el **JAR oficial de EaglercraftXServer compatible con Paper 1.12.2** dentro de:
+
+```text
+plugins/
+```
+
+EaglerXServer indica que puede instalarse como un único JAR en Spigot/Paper y que Java 17+ es obligatorio. citeturn0search0
+
+## 3. Paper
+
+Descarga una build compatible de Paper 1.12.2 desde su fuente oficial y guárdala como:
+
+```text
+paper.jar
+```
+
+No subas `paper.jar` a GitHub.
+
+## 4. Primer arranque
 
 ```bash
 ./start.sh
 ```
 
-En el primer arranque Paper puede generar el `eula.txt`. Si aceptas el EULA, cambia:
+En el primer arranque Paper generará `eula.txt`. Si aceptas el EULA, cambia:
 
 ```text
 eula=false
@@ -76,162 +93,203 @@ y vuelve a ejecutar:
 ./start.sh
 ```
 
-## 4. Plugins
+## 5. Configuración EaglerXServer
 
-La carpeta de plugins es:
-
-```text
-plugins/
-```
-
-### Plugins recomendados
-
-**EaglercraftXServer** — componente principal para compatibilidad Eaglercraft. Debe proceder de su repositorio oficial y ser compatible con la versión de Paper utilizada.
-
-**ViaVersion** — útil si quieres aceptar clientes de versiones diferentes, aunque no es necesario para un servidor Eaglercraft básico.
-
-**LuckPerms** — permisos y grupos de jugadores.
-
-**EssentialsX** — comandos básicos como `/spawn`, `/home`, `/tp`, etc. Comprueba siempre la compatibilidad con Paper 1.12.2 antes de instalar una versión.
-
-**WorldEdit** — construcción y administración de mapas. Es opcional y consume más recursos.
-
-No instales plugins al azar: un plugin moderno puede requerir una versión de Minecraft/Paper que no sea compatible con 1.12.2.
-
-## 5. Conectarse desde Eaglercraft
-
-Si el servidor Eaglercraft utiliza WebSockets, la dirección dependerá de la configuración del puente WebSocket de EaglercraftXServer.
-
-Ejemplo conceptual:
+La plantilla está en:
 
 ```text
-ws://IP_DEL_SERVIDOR:PUERTO
+eaglerxserver-settings.yml.example
 ```
 
-Para conexiones desde otro dispositivo de tu red local, primero averigua la IP del Chromebook/servidor:
+Y `setup.sh` prepara:
+
+```text
+plugins/EaglercraftXServer/settings.yml
+```
+
+Ajustes principales:
+
+```yaml
+eagler_login_timeout: 60000
+eagler_players_view_distance: 6
+enable_authentication_events: true
+http_websocket_compression_level: 6
+```
+
+`eagler_login_timeout` está expresado en milisegundos: `60000 = 60 segundos`. EaglerXServer documenta este parámetro como el tiempo máximo que una conexión puede permanecer en fase de login. citeturn3view0
+
+## 6. Plugins recomendados
+
+### Obligatorio
+
+**EaglercraftXServer** — puente/capa principal para que clientes Eaglercraft puedan conectarse al backend Paper.
+
+### Recomendados
+
+- **ViaVersion** — compatibilidad adicional de versiones cuando sea necesaria.
+- **ViaBackwards** — junto a ViaVersion cuando se necesiten clientes antiguos.
+- **ViaRewind** — útil para compatibilidad legacy; EaglerXServer también dispone de EaglerXRewind para Eaglercraft 1.5.2.
+- **LuckPerms** — permisos.
+- **EssentialsX** — comandos y utilidades.
+- **WorldEdit** — administración/construcción del mundo.
+- **EaglerMOTD** — MOTD específico para Eaglercraft.
+- **EaglerWeb** — alojamiento web desde el servidor EaglerXServer.
+- **EaglerXPlan** — estadísticas/analítica de jugadores.
+
+EaglerXServer recomienda ViaVersion, ViaBackwards y ViaRewind en determinadas configuraciones y ofrece oficialmente EaglerXRewind, EaglerMOTD, EaglerWeb y EaglerXPlan. citeturn0search0
+
+**No instales todos a la vez en un Chromebook.** Para empezar recomiendo solamente:
+
+```text
+EaglercraftXServer
+LuckPerms
+EssentialsX
+```
+
+Y añadir el resto cuando el servidor funcione correctamente.
+
+## 7. Micrófono / chat de voz
+
+El servidor incluye una guía específica en:
+
+```text
+VOICE.md
+```
+
+EaglerXServer tiene sistema/API de canales de voz (`IVoiceService`, `IVoiceManager` y canales de voz). citeturn13file0turn13file8
+
+Para que el navegador pueda usar el micrófono:
+
+1. El cliente Eaglercraft debe ser compatible con voz.
+2. Chrome debe tener permiso para el micrófono.
+3. Para un servidor público, utiliza **HTTPS/WSS**.
+4. El jugador debe aceptar el permiso de micrófono cuando Chrome lo solicite.
+
+No recomiendo meter un plugin de voz de Minecraft genérico y asumir que será compatible con Eaglercraft. La voz de Eaglercraft debe utilizar la infraestructura de EaglerXServer/cliente.
+
+## 8. Conexión
+
+En una red local puedes empezar con:
+
+```text
+ws://IP_DEL_CHROMEBOOK:PUERTO
+```
+
+Averigua la IP con:
 
 ```bash
 hostname -I
 ```
 
-**No abras puertos a Internet sin entender las implicaciones de seguridad.** Para jugar con amigos desde fuera de casa es preferible utilizar una solución de red segura en lugar de exponer directamente el servidor.
+Para voz desde Internet y una experiencia correcta en navegador, configura HTTPS/WSS mediante un dominio y un reverse proxy.
 
-## 6. Comandos de administración
+## 9. Rendimiento para Chromebook
 
-Desde la consola del servidor:
+Valores iniciales recomendados:
 
-```text
-stop
-list
-say Hola
-op TU_NOMBRE
-whitelist on
-whitelist add NOMBRE
-```
+- RAM: `768M–1536M`.
+- Render distance: `6`.
+- Simulation distance: `4`.
+- Máximo inicial: `10` jugadores.
+- Pocos plugins.
+- Evita granjas enormes de mobs/redstone.
 
-Desde un jugador con permisos:
+EaglerXServer advierte que distancias de renderizado grandes pueden provocar problemas en conexiones de bajo ancho de banda. citeturn0search0
 
-```text
-/plugins
-```
+## 10. Backups
 
-## 7. Copias de seguridad
-
-Antes de actualizar plugins o tocar el mundo:
+Antes de actualizar o modificar el mundo:
 
 ```bash
 ./backup.sh
 ```
 
-Las copias se guardan en `backups/`.
-
-## 8. Detener el servidor
-
-```bash
-./stop.sh
-```
-
-Si el servidor está ejecutándose en una terminal, también puedes usar `stop` desde la consola del servidor.
-
-## 9. Configuración recomendada para Chromebook
-
-Empieza con:
-
-- RAM: `768M–1536M`.
-- Render distance: `6`.
-- Simulation distance: `4`.
-- Pocos plugins.
-- Evita granjas gigantes de mobs/redstone.
-- No ejecutes el servidor con toda la RAM del contenedor Linux.
-
-Ejemplo de arranque:
-
-```bash
-java -Xms768M -Xmx1536M -jar paper.jar nogui
-```
-
-Si tu Chromebook tiene poca RAM, baja `-Xmx`.
-
-## 10. Estructura
+Los backups se guardan en:
 
 ```text
-.
-├── README.md
-├── setup.sh
-├── start.sh
-├── stop.sh
-├── backup.sh
-├── server.properties
-├── eula.txt
-├── paper.yml
-├── plugins/
-├── world/
-├── backups/
-└── logs/
+backups/
 ```
 
-Los directorios generados por el servidor están incluidos en `.gitignore` para evitar subir mundos, logs y archivos pesados a GitHub.
+## 11. Administración
 
-## 11. Problemas habituales
+Desde la consola:
 
-### `java: command not found`
+```text
+list
+say Hola
+op TU_NOMBRE
+whitelist on
+whitelist add NOMBRE
+stop
+```
+
+## 12. Problemas habituales
+
+### Java no existe
 
 ```bash
 sudo apt update
 sudo apt install -y openjdk-17-jre-headless
 ```
 
-### El servidor va lento
+### Login demasiado rápido
 
-Reduce la distancia de renderizado y el número de plugins. También puedes reducir `-Xmx` si ChromeOS está quedándose sin memoria.
+Comprueba que EaglerXServer esté usando:
 
-### No pueden conectarse desde otro dispositivo
+```yaml
+eagler_login_timeout: 60000
+```
 
-Comprueba primero que ambos dispositivos estén en la misma red y que estés usando la IP correcta. Después revisa el puerto y la configuración WebSocket de EaglercraftXServer.
+### El micrófono no aparece
 
-### El plugin no funciona
+Comprueba el permiso de micrófono de Chrome y utiliza HTTPS/WSS para servidores públicos. Consulta `VOICE.md`.
 
-Comprueba que la versión del plugin sea compatible con Paper 1.12.2 y con Java 17. Revisa `logs/latest.log`.
+### Eaglercraft da `End of stream`
 
-## 12. Seguridad
+Reduce `view-distance` y `eagler_players_view_distance`. EaglerXServer recomienda reducir la distancia cuando hay conexiones de poco ancho de banda. citeturn0search0
 
-Para un servidor privado:
+### Un plugin falla
 
-- Activa whitelist.
-- No des `op` a cualquiera.
+Comprueba su versión de Minecraft/Paper y Java. No todos los plugins actuales funcionan con Paper 1.12.2.
+
+## 13. Seguridad
+
+- Activa whitelist si es privado.
+- No des OP a cualquiera.
 - Haz backups.
-- No ejecutes archivos `.jar` desconocidos.
-- Descarga plugins únicamente de fuentes fiables.
-- Mantén Java y ChromeOS actualizados.
+- No ejecutes JARs desconocidos.
+- Descarga plugins de sus fuentes oficiales.
+- No expongas directamente el servidor a Internet sin protección.
+- Para voz pública usa HTTPS/WSS.
 
-## Fuentes oficiales
+## Estructura
 
-- EaglercraftXServer: https://github.com/lax1dude/eaglerxserver
-- Paper: https://papermc.io/
-- LuckPerms: https://luckperms.net/
-- EssentialsX: https://essentialsx.net/
-- WorldEdit: https://enginehub.org/worldedit/
+```text
+.
+├── README.md
+├── VOICE.md
+├── eaglerxserver-settings.yml.example
+├── setup.sh
+├── start.sh
+├── stop.sh
+├── backup.sh
+├── server.properties
+├── plugins/
+│   └── EaglercraftXServer/
+│       └── settings.yml
+├── world/
+├── backups/
+└── logs/
+```
+
+## Fuentes
+
+- urlEaglercraftXServerhttps://github.com/lax1dude/eaglerxserver
+- urlDocumentación de configuración de EaglerXServerhttps://raw.githubusercontent.com/lax1dude/eaglerxserver/main/CONFIG.md
+- urlPaperMChttps://papermc.io/
+- urlLuckPermshttps://luckperms.net/
+- urlEssentialsXhttps://essentialsx.net/
 
 ## Licencia y distribución
 
-Este repositorio proporciona automatización y configuración. No incluye ni redistribuye archivos de Minecraft que no estén autorizados para redistribución.
+Este repositorio proporciona automatización, configuración y documentación. No incluye ni redistribuye archivos de Minecraft o JARs de terceros que no estén autorizados para redistribución.

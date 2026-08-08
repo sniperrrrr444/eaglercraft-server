@@ -1,10 +1,19 @@
-# Eaglercraft Server para Chromebook Linux
+# Eaglercraft Server — Chromebook / Linux
 
-Servidor Eaglercraft para **Linux/Crostini de ChromeOS** con modo público HTTPS/WSS mediante Cloudflare Quick Tunnel.
+Servidor Eaglercraft basado en **Paper 1.12.2 + EaglerXServer**, pensado para ejecutarse en el entorno Linux de un Chromebook.
 
-## Instalación rápida
+> **Estado:** preparado para LAN y para pruebas públicas mediante Cloudflare Quick Tunnel. El Quick Tunnel proporciona una URL temporal; no es un servicio 24/7.
 
-En Terminal de Linux:
+## 1. Qué necesitas
+
+- Chromebook con Linux (Crostini) activado.
+- Java 17 o superior.
+- Internet para la instalación y para el túnel público.
+- Un cliente Eaglercraft compatible con EaglerXServer.
+
+## 2. Instalación desde cero
+
+Abre **Terminal de Linux** y ejecuta:
 
 ```bash
 sudo apt update
@@ -16,174 +25,352 @@ chmod +x *.sh
 ./install.sh
 ```
 
-Después acepta el EULA aplicable en `eula.txt` y arranca el servidor.
+`install.sh` prepara Paper 1.12.2 y descarga la release disponible de EaglerXServer. También crea la configuración básica del servidor.
 
-## Arrancar y obtener un enlace público
+### EULA
 
-Para el modo que tú quieres —**arrancar, obtener un enlace y compartirlo**— usa:
-
-```bash
-./start-public.sh
-```
-
-El orden es importante:
-
-```text
-Paper/EaglerXServer
-       ↓
-abre 25565
-       ↓
-Cloudflare Quick Tunnel
-       ↓
-genera HTTPS público
-       ↓
-se convierte en endpoint WSS
-```
-
-La terminal mostrará algo parecido a:
-
-```text
-SERVIDOR ONLINE
-
-HTTPS: https://xxxxx.trycloudflare.com
-WSS:   wss://xxxxx.trycloudflare.com
-```
-
-El enlace `wss://` es el endpoint seguro que debe configurar el cliente Eaglercraft. El enlace HTTPS sirve como dirección web del túnel; **no es por sí mismo un cliente Eaglercraft completo**.
-
-El enlace de Quick Tunnel es temporal y normalmente cambia al reiniciar. Es adecuado para pruebas/juego ocasional, no como dirección permanente 24/7.
-
-## Detener el servidor
-
-Pulsa `Ctrl+C` o detén el proceso. El script limpia el túnel y elimina las URLs temporales de `server-url.env`.
-
-También puedes detener solo el túnel con:
+La primera instalación crea `eula.txt`. Abre el archivo y acepta el EULA de Minecraft únicamente si estás de acuerdo con sus términos:
 
 ```bash
-./tunnel.sh stop
+nano eula.txt
 ```
 
-## Si solo quieres LAN
+Cambia:
 
-Puedes usar el arranque normal:
+```text
+eula=false
+```
+
+a:
+
+```text
+eula=true
+```
+
+Guarda el archivo.
+
+## 3. Primer arranque local
+
+Para ejecutar el servidor dentro del Chromebook:
 
 ```bash
 ./start.sh
 ```
 
-Obtén la IP del Chromebook:
+Este modo es para LAN/pruebas. El servidor usa el puerto local `25565`.
+
+Para detenerlo, utiliza `stop` en la consola del servidor o:
+
+```bash
+./stop.sh
+```
+
+## 4. Servidor público con enlace automático
+
+Si quieres el sistema que **arranca el servidor y te da un enlace para compartir**, utiliza:
+
+```bash
+./start-public.sh
+```
+
+El proceso es:
+
+```text
+Paper 1.12.2
+     ↓
+EaglerXServer
+     ↓
+25565 listo
+     ↓
+Cloudflare Quick Tunnel
+     ↓
+HTTPS público
+     ↓
+endpoint WSS
+```
+
+La terminal debería mostrar:
+
+```text
+==========================================
+ SERVIDOR ONLINE
+==========================================
+HTTPS: https://xxxxx.trycloudflare.com
+WSS:   wss://xxxxx.trycloudflare.com
+==========================================
+```
+
+### Qué enlace compartes
+
+El `wss://...` es el **endpoint WebSocket seguro** que necesita el cliente Eaglercraft compatible.
+
+El `https://...` es la dirección HTTPS del túnel. **No es automáticamente una página de juego Eaglercraft.** Para entrar hace falta un cliente Eaglercraft compatible y configurar en él el endpoint WSS.
+
+El proyecto guarda temporalmente las URLs en:
+
+```text
+server-url.env
+```
+
+y genera:
+
+```text
+PLAYER-LINK.html
+```
+
+La URL de Quick Tunnel es temporal y puede cambiar al reiniciar.
+
+## 5. Cómo se instala Cloudflare Tunnel
+
+No necesitas instalar `cloudflared` manualmente. `tunnel.sh` detecta la arquitectura del Chromebook e intenta descargar la versión Linux correspondiente.
+
+Si la descarga automática falla, instala `cloudflared` manualmente y vuelve a ejecutar:
+
+```bash
+./start-public.sh
+```
+
+El script guarda los mensajes del túnel en:
+
+```text
+tunnel.log
+```
+
+## 6. Detener correctamente el modo público
+
+Pulsa:
+
+```text
+Ctrl+C
+```
+
+El script debe detener el proceso del túnel y el servidor Paper.
+
+También puedes detener solo el túnel:
+
+```bash
+./tunnel.sh stop
+```
+
+## 7. Si los amigos están en la misma Wi-Fi
+
+Para LAN puedes usar `./start.sh` sin publicar el servidor en Internet.
+
+Obtén las direcciones disponibles con:
 
 ```bash
 hostname -I
 ```
 
-Para otros dispositivos de la misma Wi-Fi, configura la **Redirección de puertos de ChromeOS** para TCP 25565 si es necesaria y utiliza la IP del Chromebook. No uses `localhost` desde otro dispositivo.
+En ChromeOS puede ser necesario configurar **Redirección de puertos / Port forwarding** para TCP `25565` desde la configuración del entorno Linux.
 
-## HTTPS/WSS permanente
+Los demás dispositivos deben conectarse usando la **IP del Chromebook**, no `localhost` y no una IP interna de Crostini que no sea accesible desde la LAN.
 
-El Quick Tunnel no proporciona una URL permanente. Para un dominio fijo necesitas un despliegue con un dominio y un reverse proxy/túnel permanente.
+## 8. HTTPS/WSS permanente
 
-El archivo `Caddyfile.example` y `HTTPS-WSS.md` explican la arquitectura con Caddy:
+El Quick Tunnel no proporciona un dominio permanente. Si quieres algo como:
 
 ```text
-Internet
-   ↓ HTTPS/WSS :443
-Caddy
-   ↓
-EaglerXServer
-   ↓
-Paper
+wss://mc.tudominio.com
 ```
 
-No hace falta Caddy para `./start-public.sh`: ese comando utiliza Cloudflare Quick Tunnel.
+necesitas un dominio y un despliegue permanente con un reverse proxy/túnel compatible.
 
-## Micrófono / voz
+El repositorio incluye:
 
-HTTPS/WSS es necesario para el contexto seguro del navegador, pero **no activa el micrófono automáticamente**. Para voz necesitas:
+- `Caddyfile.example`
+- `HTTPS-WSS.md`
 
-- un cliente Eaglercraft compatible con voz;
-- permiso de micrófono en Chrome;
-- configuración de voz compatible con la versión de EaglerXServer.
+para documentar esa arquitectura.
 
-El servidor no puede conceder permisos del navegador por sí mismo.
+## 9. Micrófono / voz
 
-## Login aumentado
+El servidor **no puede activar el micrófono del Chromebook por sí solo**.
 
-El objetivo de configuración es un timeout de login de **60 segundos**. El valor debe existir en la configuración real de EaglerXServer instalada; no añadas una clave inventada a un archivo YAML distinto.
+Para voz necesitas que:
 
-Comprueba el `settings.cfg` generado por la versión instalada y usa la clave que indique su documentación oficial para `eagler_login_timeout`.
+1. El cliente Eaglercraft sea compatible con voz.
+2. El navegador conceda permiso de micrófono.
+3. La conexión utilice un contexto seguro HTTPS/WSS cuando el cliente lo requiera.
+4. EaglerXServer y el cliente utilicen una configuración de voz compatible.
 
-## EaglerXServer y Paper
+HTTPS/WSS no crea la función de voz; únicamente proporciona el transporte/contexto seguro necesario para las funciones web que lo requieran.
 
-EaglerXServer proporciona la compatibilidad Eaglercraft sobre Bukkit/Paper. El proyecto está orientado a Paper 1.12.2 y Java 17+.
+## 10. Login de 60 segundos
 
-## Plugins
+El proyecto busca utilizar un timeout de login de **60.000 ms (60 segundos)** en la configuración real de EaglerXServer.
 
-Instala solo versiones que indiquen compatibilidad con **Paper 1.12.2 + Java 17**. Recomendaciones iniciales:
+No se debe añadir esa opción a un YAML inventado. Tras el primer arranque, revisa:
+
+```text
+plugins/EaglerXServer/settings.cfg
+```
+
+y aplica la clave `eagler_login_timeout` si está disponible en la versión instalada.
+
+## 11. EaglerXServer + Paper
+
+La base del proyecto utiliza Paper 1.12.2 y Java 17+. EaglerXServer proporciona la integración Eaglercraft sobre el servidor Bukkit/Paper.
+
+No sustituyas el JAR de EaglerXServer por una versión aleatoria de Internet: utiliza una versión compatible con la base del servidor.
+
+## 12. Plugins
+
+Plugins recomendados únicamente cuando su versión indique compatibilidad con Paper 1.12.2/Java 17:
 
 - EaglerXServer — necesario para Eaglercraft.
 - LuckPerms — permisos.
-- EssentialsX — comandos/utilidades, si la versión elegida soporta 1.12.2.
+- EssentialsX — utilidades, verificando compatibilidad con 1.12.2.
 - WorldEdit — opcional.
 
-ViaVersion/ViaBackwards/ViaRewind y plugins específicos de Eaglercraft deben comprobarse por versión antes de instalarlos. No se instalan automáticamente a ciegas.
+**No se instalan automáticamente ViaVersion, ViaBackwards, ViaRewind ni plugins adicionales de Eaglercraft**, porque una versión moderna no es automáticamente compatible con Paper 1.12.2.
 
-## Rendimiento Chromebook
+## 13. Rendimiento en Chromebook
 
-Empieza con:
+Empieza de forma conservadora:
 
-- `768M–1536M` de RAM para Java.
+- Java: `768M–1536M` de heap.
 - `view-distance=6`.
-- `simulation-distance=4` cuando la versión de Paper utilizada lo admita.
-- pocos jugadores/plugins al principio.
+- `simulation-distance=4` cuando la versión de Paper lo soporte.
+- pocos jugadores y plugins.
 
-## Diagnóstico
+Si el Chromebook tiene poca RAM, reduce primero el número de jugadores, distancia de visión y plugins.
+
+## 14. Diagnóstico
+
+Ejecuta:
 
 ```bash
 ./network-check.sh
 ```
 
-Si el modo público falla, revisa:
+Si falla el modo público, revisa:
 
 ```text
 server-console.log
 tunnel.log
 ```
 
-Comprueba también que `cloudflared` pueda iniciar y que Paper esté escuchando en `127.0.0.1:25565`.
+Y comprueba:
 
-## 24/7
+```bash
+ss -ltn | grep 25565
+```
 
-El Quick Tunnel está pensado para pruebas y desarrollo. Si quieres que tus amigos puedan entrar aunque el Chromebook esté apagado, migra el servidor a un hosting que permita:
+Debe existir un listener cuando Paper esté funcionando.
 
-- Java 17.
-- Paper 1.12.2.
-- JARs/plugins personalizados.
-- EaglerXServer.
-- WebSockets/WSS.
-- almacenamiento persistente.
-- un endpoint HTTPS/WSS público.
+## 15. Backup y migración
 
-Consulta `24h-hosting.md` para la migración.
-
-## Backup
+Antes de migrar a un servidor 24/7:
 
 ```bash
 ./backup.sh
 ```
 
-No subas mundos, tokens, claves privadas o certificados a GitHub.
+La copia debe conservar el mundo, plugins y configuración necesaria.
 
-## Scripts
+**No subas a GitHub contraseñas, tokens, certificados privados ni otros secretos.**
 
-- `install.sh` — instala/prepara Paper y EaglerXServer.
-- `setup.sh` — preparación adicional.
-- `start.sh` — servidor local/LAN.
-- `start-public.sh` — servidor + túnel HTTPS/WSS temporal.
-- `tunnel.sh` — inicia/detiene Cloudflare Quick Tunnel.
-- `stop.sh` — detención.
-- `backup.sh` — copias de seguridad.
-- `network-check.sh` — diagnóstico.
+## 16. Servidor 24/7
+
+El Quick Tunnel sirve para jugar mientras el Chromebook está encendido. **No mantiene el servidor activo con el Chromebook apagado.**
+
+Para 24/7 necesitas migrar Paper + EaglerXServer a un hosting que permita como mínimo:
+
+- Java 17.
+- Paper 1.12.2.
+- JARs/plugins personalizados.
+- procesos persistentes.
+- almacenamiento persistente.
+- WebSockets.
+- HTTPS/WSS o un reverse proxy compatible.
+- un endpoint público.
+
+Consulta `24h-hosting.md`.
+
+No se declara ningún proveedor gratuito como compatible al 100% sin comprobar sus límites y soporte actuales.
+
+## 17. Cambio de URL al migrar
+
+Cuando pases del Chromebook a un hosting 24/7, el endpoint cambia, por ejemplo:
+
+```text
+ANTES
+wss://xxxxx.trycloudflare.com
+
+DESPUÉS
+wss://tu-servidor.example
+```
+
+Usa el sistema de configuración de URL del proyecto para actualizar el endpoint en lugar de editar archivos al azar.
+
+## 18. Archivos principales
+
+```text
+install.sh          instalación
+setup.sh            preparación
+start.sh            servidor LAN/local
+start-public.sh     servidor + enlace HTTPS/WSS temporal
+tunnel.sh           Cloudflare Quick Tunnel
+stop.sh             parada
+backup.sh           copias de seguridad
+network-check.sh    diagnóstico
+24h-hosting.md      migración a 24/7
+HTTPS-WSS.md        HTTPS/WSS permanente
+Caddyfile.example   ejemplo de reverse proxy
+```
+
+## 19. Solución rápida de problemas
+
+### `Falta paper.jar`
+
+Ejecuta:
+
+```bash
+./install.sh
+```
+
+### `puerto 25565 ocupado`
+
+Hay otra instancia funcionando. Deténla antes de arrancar otra.
+
+### Paper se cierra inmediatamente
+
+Revisa:
+
+```text
+server-console.log
+```
+
+y comprueba Java:
+
+```bash
+java -version
+```
+
+Debe ser Java 17 o superior para la configuración de este proyecto.
+
+### No aparece el enlace HTTPS
+
+Revisa:
+
+```text
+tunnel.log
+```
+
+Comprueba Internet y que `curl` funcione.
+
+### El enlace HTTPS funciona pero Eaglercraft no conecta
+
+Comprueba que estás usando el **endpoint WSS correcto**, que el cliente Eaglercraft sea compatible con EaglerXServer y que el endpoint corresponda al servicio WebSocket real. Un túnel HTTPS genérico no convierte automáticamente cualquier servidor TCP en un servidor Eaglercraft.
+
+## 20. Seguridad
+
+- No publiques el puerto de Paper directamente si puedes mantenerlo detrás de un proxy/túnel adecuado.
+- Mantén Java, Paper, EaglerXServer y el sistema actualizados dentro de las versiones compatibles.
+- Usa whitelist si el servidor es privado.
+- No des OP innecesariamente.
+- No publiques secretos en GitHub.
 
 ## Fuentes
 

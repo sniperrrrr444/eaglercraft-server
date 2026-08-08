@@ -1,0 +1,17 @@
+# EaglerXServer 1.1.x - plantilla recomendada para Bukkit/Paper
+# Si tu build genera settings.yml automáticamente, conserva el formato generado por ella.
+server_name: "Eaglercraft Chromebook Server"
+eagler_login_timeout: 60000
+eagler_players_view_distance: 6
+enable_authentication_events: true
+http_websocket_compression_level: 6
+http_websocket_ping_intervention: false
+protocols:
+  min_minecraft_protocol: 3
+  max_minecraft_protocol: 340
+  max_minecraft_protocol_v5: -1
+  protocol_legacy_allowed: true
+  protocol_v3_allowed: true
+  protocol_v4_allowed: true
+  protocol_v5_allowed: true
+  eaglerxrewind_allowed: true

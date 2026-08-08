@@ -1,6 +1,6 @@
 # Eaglercraft Server para Chromebook Linux
 
-Servidor Eaglercraft para **Linux/Crostini de ChromeOS**, preparado para instalarse con un único script.
+Servidor Eaglercraft para **Linux/Crostini de ChromeOS**. He revisado la configuración contra la documentación actual de EaglerXServer y he corregido el instalador para que no cree una configuración falsa.
 
 ## Instalación rápida
 
@@ -8,99 +8,102 @@ En Terminal de Linux:
 
 ```bash
 sudo apt update
-sudo apt install -y openjdk-17-jre-headless git curl python3
+sudo apt install -y openjdk-17-jre git curl python3
 
 git clone https://github.com/sniperrrrr444/eaglercraft-server.git
 cd eaglercraft-server
-chmod +x install.sh setup.sh start.sh stop.sh backup.sh
+chmod +x *.sh
 ./install.sh
 ```
 
-`install.sh` descarga automáticamente la última build disponible de **Paper 1.12.2** desde la API oficial de PaperMC y prepara el servidor. No guarda JARs de terceros dentro de GitHub.
+El instalador descarga:
 
-Después:
+- **Paper 1.12.2** desde la API oficial de PaperMC.
+- La última release de **EaglerXServer** desde su repositorio oficial.
+
+EaglerXServer requiere Java 17+ y su soporte Bukkit nativo está basado en Paper 1.12.2. citehttps://github.com/lax1dude/eaglerxserverturn3search0
+
+### EULA
+
+Después de instalar:
 
 ```bash
 nano eula.txt
 ```
 
-Cambia `eula=false` a `eula=true` si aceptas el EULA aplicable y ejecuta:
+Pon `eula=true` solamente si aceptas el EULA aplicable. Después:
 
 ```bash
 ./start.sh
 ```
 
-## EaglercraftXServer
+## Compatibilidad comprobada
 
-El componente que permite las conexiones Eaglercraft debe instalarse siguiendo el repositorio oficial de EaglerXServer. No recomiendo que el instalador descargue automáticamente un JAR de una URL fija de GitHub porque las builds pueden cambiar y queremos evitar instalar un binario incorrecto o desactualizado.
+La combinación elegida tiene sentido para Eaglercraft porque el propio proyecto EaglerXServer indica que su API Bukkit nativa usa **Paper 1.12.2** y que requiere **Java 17 o superior**. También indica soporte para clientes EaglercraftX 1.8, Eaglercraft 1.12.2 y, con EaglerXRewind, clientes 1.5.2. citehttps://github.com/lax1dude/eaglerxserverturn3search0
 
-Repositorio oficial: https://github.com/lax1dude/eaglerxserver
+Paper recomienda Java 11 para Paper 1.12–1.16.4, pero EaglerXServer exige Java 17; por eso este proyecto prioriza el requisito de EaglerXServer y usa Java 17. citeturn0search1turn3search0
 
-Coloca el JAR compatible con Paper/Spigot en:
+## Login: 60 segundos
 
-```text
-plugins/
-```
-
-EaglerXServer requiere Java 17+ y ofrece soporte para Eaglercraft X 1.8, Eaglercraft 1.12.2 y 1.5.2 según su configuración/componentes.
-
-## Login aumentado
-
-La configuración del proyecto está preparada para un máximo de **60 segundos** de login:
+El archivo `settings.cfg.example` contiene:
 
 ```yaml
 eagler_login_timeout: 60000
 eagler_players_view_distance: 6
 ```
 
-`60000` son 60.000 ms = 60 segundos.
+EaglerXServer documenta `eagler_login_timeout` en milisegundos y su valor predeterminado es 10000 ms; `60000` lo aumenta a **60 segundos**. También documenta `eagler_players_view_distance` como una distancia independiente para jugadores Eaglercraft en Paper, con valores de 3 a 15 o `-1`. citeturn2view0
+
+**Importante:** no copiamos automáticamente todo el ejemplo sobre el archivo generado por EaglerXServer. La versión instalada genera su propio `settings.cfg`; si quieres los 60 segundos, aplica esas dos claves a ese archivo después del primer arranque.
 
 ## Micrófono / voz
 
-EaglerXServer dispone de infraestructura de voz. El repositorio incluye `VOICE.md` con la configuración y requisitos.
+EaglerXServer incluye una API de voz y permite crear/gestionar canales de voz desde la API. citeturn3search0
 
-Para que funcione en navegador:
+Para usar voz desde Chrome:
 
 1. El cliente Eaglercraft debe soportar voz.
-2. Chrome debe tener permiso para usar el micrófono.
-3. Para un servidor público, utiliza **HTTPS/WSS**.
-4. El jugador debe aceptar el permiso de micrófono.
+2. Chrome debe tener permiso de micrófono.
+3. En un servidor público, usa **HTTPS/WSS**.
+4. El jugador debe aceptar el permiso del navegador.
 
-No se ha añadido un plugin genérico de voz de Minecraft porque no implica automáticamente compatibilidad con el sistema de voz de Eaglercraft.
+El servidor no puede activar físicamente el micrófono del Chromebook: el navegador controla ese permiso.
 
 ## Plugins
 
-### Recomendados para empezar
+### Base
 
-- EaglercraftXServer — necesario para Eaglercraft.
+- **EaglerXServer** — instalado automáticamente por `install.sh` desde su release oficial.
+
+### Compatibilidad opcional
+
+EaglerXServer indica que, para determinadas configuraciones de servidores Spigot/Paper, normalmente se necesitan **ViaVersion, ViaBackwards y ViaRewind** para compatibilidad con clientes 1.8; EaglerXRewind añade soporte para Eaglercraft 1.5.2. citeturn3search0
+
+No los instalo automáticamente porque las versiones actuales de estos plugins no tienen por qué ser compatibles con Paper 1.12.2. ViaVersion sí requiere Java 17+, pero su versión adecuada debe seleccionarse para la plataforma antigua. citeturn0search8
+
+### Utilidades opcionales
+
 - LuckPerms — permisos.
-- EssentialsX — comandos y utilidades.
+- EssentialsX — comandos/utilidades.
+- WorldEdit — construcción.
+- EaglerMOTD — MOTD Eaglercraft.
+- EaglerWeb — contenido web desde EaglerXServer.
+- EaglerXPlan — estadísticas.
 
-### Opcionales
+No recomiendo instalar todo en un Chromebook. Empieza con EaglerXServer y añade plugins uno por uno.
 
-- ViaVersion
-- ViaBackwards
-- ViaRewind
-- WorldEdit
-- EaglerMOTD
-- EaglerWeb
-- EaglerXPlan
+## Rendimiento Chromebook
 
-**No instales todos de golpe en un Chromebook.** Empieza con EaglercraftXServer + LuckPerms + EssentialsX y comprueba el rendimiento.
-
-## Chromebook: rendimiento
-
-Configuración inicial:
+Valores iniciales:
 
 - RAM: `768M–1536M`.
 - Render distance: `6`.
 - Simulation distance: `4`.
 - Máximo inicial: `10` jugadores.
-- Pocos plugins.
 
-Si el Chromebook tiene poca RAM, reduce `-Xmx1536M` en `start.sh`.
+EaglerXServer advierte que distancias grandes pueden provocar problemas en conexiones de poco ancho de banda. citeturn3search0
 
-## Conexión local
+## Conexión
 
 Averigua la IP del Chromebook:
 
@@ -108,26 +111,9 @@ Averigua la IP del Chromebook:
 hostname -I
 ```
 
-La conexión Eaglercraft utiliza el endpoint WebSocket configurado por EaglerXServer, normalmente con una dirección del tipo:
+EaglerXServer añade una capa de traducción para que las conexiones Eaglercraft puedan usar la misma dirección/puerto del servidor Java. citeturn3search0
 
-```text
-ws://IP_DEL_SERVIDOR:PUERTO
-```
-
-Para Internet y micrófono, usa HTTPS/WSS y una configuración de proxy/reverse proxy apropiada. No expongas directamente el servidor sin protección.
-
-## Administración
-
-En la consola:
-
-```text
-list
-say Hola
-op TU_NOMBRE
-whitelist on
-whitelist add NOMBRE
-stop
-```
+Para voz y conexiones públicas, configura HTTPS/WSS y un reverse proxy adecuado. No abras el servidor directamente a Internet sin protección.
 
 ## Backups
 
@@ -135,31 +121,40 @@ stop
 ./backup.sh
 ```
 
-Las copias se guardan en `backups/`.
+Los backups se guardan en `backups/`.
+
+## Scripts
+
+- `install.sh` — instala Paper + EaglerXServer oficial.
+- `setup.sh` — comprueba el entorno y prepara carpetas.
+- `start.sh` — arranca el servidor.
+- `stop.sh` — ayuda a detener procesos lanzados con PID si los hubiera; para una sesión interactiva usa `stop` en la consola.
+- `backup.sh` — crea una copia comprimida del mundo.
 
 ## Problemas
 
-**Java no existe:**
+**Java no existe:** instala Java 17 no-headless:
 
 ```bash
-sudo apt install -y openjdk-17-jre-headless
+sudo apt install -y openjdk-17-jre
 ```
 
-**El servidor va lento:** baja render distance, jugadores y plugins.
+Paper recomienda no utilizar las variantes `-headless` porque pueden carecer de dependencias necesarias. citeturn0search2
 
-**El micrófono no aparece:** revisa permisos de Chrome y usa HTTPS/WSS en servidores públicos.
+**Eaglercraft no conecta:** comprueba que `plugins/EaglerXServer.jar` exista, revisa `logs/latest.log` y comprueba el listener/configuración de EaglerXServer.
 
-**Eaglercraft no conecta:** comprueba EaglerXServer, el puerto WebSocket y que el cliente sea compatible.
+**El login es demasiado corto:** edita `plugins/EaglercraftXServer/settings.cfg` y establece `eagler_login_timeout: 60000`.
 
-**Plugin incompatible:** Paper 1.12.2 es antiguo; usa versiones de plugins compatibles con esa plataforma.
+**El micrófono no funciona:** revisa el permiso de micrófono del sitio y usa HTTPS/WSS en un servidor público.
+
+**Un plugin falla:** Paper 1.12.2 es una plataforma antigua. No instales automáticamente versiones modernas de plugins sin comprobar compatibilidad.
 
 ## Fuentes oficiales
 
 - EaglerXServer: https://github.com/lax1dude/eaglerxserver
+- Configuración EaglerXServer: https://raw.githubusercontent.com/lax1dude/eaglerxserver/main/CONFIG.md
 - PaperMC: https://papermc.io/
-- LuckPerms: https://luckperms.net/
-- EssentialsX: https://essentialsx.net/
 
-## Nota sobre los archivos JAR
+## Nota sobre JARs
 
-Este repositorio contiene scripts y configuración, no redistribuye JARs de Minecraft/Eaglercraft ni plugins de terceros. El instalador descarga Paper desde la API oficial de PaperMC y deja la instalación de EaglerXServer bajo su fuente oficial/documentación para evitar distribuir binarios de terceros sin autorización.
+El repositorio no redistribuye JARs propios de Minecraft. `install.sh` descarga Paper desde PaperMC y EaglerXServer desde el repositorio oficial de EaglerXServer en el momento de la instalación.

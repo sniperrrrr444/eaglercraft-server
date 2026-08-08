@@ -1,12 +1,14 @@
 # Eaglercraft Server para Chromebook Linux
 
-Servidor Eaglercraft para **Linux/Crostini de ChromeOS**, preparado para usar HTTPS/WSS mediante un reverse proxy.
+Servidor Eaglercraft para **Linux/Crostini de ChromeOS** con modo público HTTPS/WSS mediante Cloudflare Quick Tunnel.
 
 ## Instalación rápida
 
+En Terminal de Linux:
+
 ```bash
 sudo apt update
-sudo apt install -y openjdk-17-jre git curl python3 iproute2
+sudo apt install -y openjdk-17-jre curl python3 iproute2 git
 
 git clone https://github.com/sniperrrrr444/eaglercraft-server.git
 cd eaglercraft-server
@@ -14,56 +16,126 @@ chmod +x *.sh
 ./install.sh
 ```
 
-El instalador descarga Paper 1.12.2 y la última release de EaglerXServer desde sus fuentes oficiales.
+Después acepta el EULA aplicable en `eula.txt` y arranca el servidor.
 
-## HTTPS + WSS
+## Arrancar y obtener un enlace público
 
-Para un servidor público y para que el micrófono del navegador pueda funcionar correctamente, la arquitectura recomendada es:
+Para el modo que tú quieres —**arrancar, obtener un enlace y compartirlo**— usa:
 
-```text
-Cliente Eaglercraft
-       |
-   HTTPS / WSS
-       |
-   Caddy :443
-       |
-127.0.0.1:25565
-       |
- EaglerXServer
-       |
-     Paper
+```bash
+./start-public.sh
 ```
 
-El repositorio incluye:
-
-- `Caddyfile.example` — configuración de reverse proxy.
-- `HTTPS-WSS.md` — guía completa de publicación segura.
-
-### Necesitas
-
-1. Un dominio real, por ejemplo `mc.tudominio.com`.
-2. El DNS del dominio apuntando a tu IP pública.
-3. TCP `443` redirigido en tu router al Chromebook.
-4. Redirección de puertos de ChromeOS si el servicio está dentro de Crostini.
-5. Caddy ejecutándose como reverse proxy.
-
-Caddy obtiene y renueva automáticamente un certificado TLS válido cuando el dominio es accesible públicamente.
-
-Después, el cliente Eaglercraft utiliza un endpoint seguro del tipo:
+El orden es importante:
 
 ```text
-wss://mc.tudominio.com
+Paper/EaglerXServer
+       ↓
+abre 25565
+       ↓
+Cloudflare Quick Tunnel
+       ↓
+genera HTTPS público
+       ↓
+se convierte en endpoint WSS
 ```
 
-**No uses `ws://` para el endpoint público.**
+La terminal mostrará algo parecido a:
 
-No es correcto prometer que GitHub puede configurar automáticamente tu router, DNS o NAT: esas partes dependen de tu red.
+```text
+SERVIDOR ONLINE
 
-## Red local de Chromebook
+HTTPS: https://xxxxx.trycloudflare.com
+WSS:   wss://xxxxx.trycloudflare.com
+```
 
-Para jugar desde otro dispositivo de la misma Wi-Fi, ChromeOS puede necesitar su función **Redirección de puertos / Port forwarding** para publicar el servicio Linux. La IP que debes usar para otros dispositivos es la IP del Chromebook, no una IP interna de Crostini.
+El enlace `wss://` es el endpoint seguro que debe configurar el cliente Eaglercraft. El enlace HTTPS sirve como dirección web del túnel; **no es por sí mismo un cliente Eaglercraft completo**.
 
-Si utilizas el proxy HTTPS, la publicación externa es **443/TCP**, no 25565 directamente.
+El enlace de Quick Tunnel es temporal y normalmente cambia al reiniciar. Es adecuado para pruebas/juego ocasional, no como dirección permanente 24/7.
+
+## Detener el servidor
+
+Pulsa `Ctrl+C` o detén el proceso. El script limpia el túnel y elimina las URLs temporales de `server-url.env`.
+
+También puedes detener solo el túnel con:
+
+```bash
+./tunnel.sh stop
+```
+
+## Si solo quieres LAN
+
+Puedes usar el arranque normal:
+
+```bash
+./start.sh
+```
+
+Obtén la IP del Chromebook:
+
+```bash
+hostname -I
+```
+
+Para otros dispositivos de la misma Wi-Fi, configura la **Redirección de puertos de ChromeOS** para TCP 25565 si es necesaria y utiliza la IP del Chromebook. No uses `localhost` desde otro dispositivo.
+
+## HTTPS/WSS permanente
+
+El Quick Tunnel no proporciona una URL permanente. Para un dominio fijo necesitas un despliegue con un dominio y un reverse proxy/túnel permanente.
+
+El archivo `Caddyfile.example` y `HTTPS-WSS.md` explican la arquitectura con Caddy:
+
+```text
+Internet
+   ↓ HTTPS/WSS :443
+Caddy
+   ↓
+EaglerXServer
+   ↓
+Paper
+```
+
+No hace falta Caddy para `./start-public.sh`: ese comando utiliza Cloudflare Quick Tunnel.
+
+## Micrófono / voz
+
+HTTPS/WSS es necesario para el contexto seguro del navegador, pero **no activa el micrófono automáticamente**. Para voz necesitas:
+
+- un cliente Eaglercraft compatible con voz;
+- permiso de micrófono en Chrome;
+- configuración de voz compatible con la versión de EaglerXServer.
+
+El servidor no puede conceder permisos del navegador por sí mismo.
+
+## Login aumentado
+
+El objetivo de configuración es un timeout de login de **60 segundos**. El valor debe existir en la configuración real de EaglerXServer instalada; no añadas una clave inventada a un archivo YAML distinto.
+
+Comprueba el `settings.cfg` generado por la versión instalada y usa la clave que indique su documentación oficial para `eagler_login_timeout`.
+
+## EaglerXServer y Paper
+
+EaglerXServer proporciona la compatibilidad Eaglercraft sobre Bukkit/Paper. El proyecto está orientado a Paper 1.12.2 y Java 17+.
+
+## Plugins
+
+Instala solo versiones que indiquen compatibilidad con **Paper 1.12.2 + Java 17**. Recomendaciones iniciales:
+
+- EaglerXServer — necesario para Eaglercraft.
+- LuckPerms — permisos.
+- EssentialsX — comandos/utilidades, si la versión elegida soporta 1.12.2.
+- WorldEdit — opcional.
+
+ViaVersion/ViaBackwards/ViaRewind y plugins específicos de Eaglercraft deben comprobarse por versión antes de instalarlos. No se instalan automáticamente a ciegas.
+
+## Rendimiento Chromebook
+
+Empieza con:
+
+- `768M–1536M` de RAM para Java.
+- `view-distance=6`.
+- `simulation-distance=4` cuando la versión de Paper utilizada lo admita.
+- pocos jugadores/plugins al principio.
 
 ## Diagnóstico
 
@@ -71,81 +143,51 @@ Si utilizas el proxy HTTPS, la publicación externa es **443/TCP**, no 25565 dir
 ./network-check.sh
 ```
 
-Comprueba el estado del listener y te ayuda a localizar problemas de red.
-
-## EaglercraftXServer
-
-EaglerXServer es la capa de compatibilidad Eaglercraft. Su soporte Bukkit nativo está basado en Paper 1.12.2 y requiere Java 17+.
-
-## Login: 60 segundos
-
-Después del primer arranque, aplica en `plugins/EaglercraftXServer/settings.cfg`:
+Si el modo público falla, revisa:
 
 ```text
-eagler_login_timeout: 60000
-eagler_players_view_distance: 6
+server-console.log
+tunnel.log
 ```
 
-`60000` ms = 60 segundos.
+Comprueba también que `cloudflared` pueda iniciar y que Paper esté escuchando en `127.0.0.1:25565`.
 
-## Micrófono / voz
+## 24/7
 
-El servidor no puede activar el micrófono físicamente. Para voz necesitas:
+El Quick Tunnel está pensado para pruebas y desarrollo. Si quieres que tus amigos puedan entrar aunque el Chromebook esté apagado, migra el servidor a un hosting que permita:
 
-- cliente Eaglercraft compatible con voz;
-- permiso de micrófono en Chrome;
-- HTTPS/WSS para un despliegue público;
-- configuración de voz compatible con la versión de EaglerXServer.
-
-## Plugins
-
-Base:
-
+- Java 17.
+- Paper 1.12.2.
+- JARs/plugins personalizados.
 - EaglerXServer.
+- WebSockets/WSS.
+- almacenamiento persistente.
+- un endpoint HTTPS/WSS público.
 
-Opcionales: instala únicamente versiones compatibles con Paper 1.12.2:
+Consulta `24h-hosting.md` para la migración.
 
-- ViaVersion / ViaBackwards / ViaRewind.
-- LuckPerms.
-- EssentialsX.
-- WorldEdit.
-- EaglerMOTD.
-- EaglerWeb.
-- EaglerXPlan.
+## Backup
 
-## Rendimiento Chromebook
+```bash
+./backup.sh
+```
 
-Empieza con:
-
-- `768M–1536M` RAM.
-- `view-distance=6`.
-- `simulation-distance=4`.
-- 10 jugadores como máximo.
-
-## Seguridad
-
-- No expongas Paper directamente a Internet si puedes mantenerlo detrás de Caddy.
-- Usa HTTPS/WSS.
-- Mantén el dominio y certificados correctamente configurados.
-- Usa whitelist para servidores privados.
-- No des OP innecesariamente.
+No subas mundos, tokens, claves privadas o certificados a GitHub.
 
 ## Scripts
 
-- `install.sh` — instala Paper + EaglerXServer.
-- `setup.sh` — prepara el entorno.
-- `start.sh` — arranca el servidor.
-- `stop.sh` — detiene el servidor.
-- `backup.sh` — backups.
-- `network-check.sh` — diagnóstico de red.
-
-## Documentación
-
-- `HTTPS-WSS.md` — despliegue HTTPS/WSS.
-- `Caddyfile.example` — configuración del proxy.
+- `install.sh` — instala/prepara Paper y EaglerXServer.
+- `setup.sh` — preparación adicional.
+- `start.sh` — servidor local/LAN.
+- `start-public.sh` — servidor + túnel HTTPS/WSS temporal.
+- `tunnel.sh` — inicia/detiene Cloudflare Quick Tunnel.
+- `stop.sh` — detención.
+- `backup.sh` — copias de seguridad.
+- `network-check.sh` — diagnóstico.
 
 ## Fuentes
 
 - EaglerXServer: https://github.com/lax1dude/eaglerxserver
 - PaperMC: https://papermc.io/
+- Cloudflare Quick Tunnels: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/
 - ChromeOS Port Forwarding: https://developers.google.com/chromeos/app-development/develop/port-forwarding

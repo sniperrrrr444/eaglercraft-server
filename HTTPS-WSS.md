@@ -1,8 +1,8 @@
 # HTTPS + WSS
 
-Para que Eaglercraft y el micrófono funcionen de forma fiable desde navegador, el endpoint público debe usar HTTPS/WSS.
+For Eaglercraft and browser microphone features to work reliably, the public endpoint should use HTTPS/WSS when the client requires a secure context.
 
-## Arquitectura
+## Architecture
 
 ```text
 Eaglercraft (Chrome)
@@ -18,46 +18,46 @@ Eaglercraft (Chrome)
       Paper
 ```
 
-## Requisitos
+## Requirements
 
-1. Un dominio real, por ejemplo `mc.example.com`.
-2. El DNS `A/AAAA` del dominio apuntando a tu conexión pública.
-3. TCP 443 redirigido en el router hacia el Chromebook.
-4. Redirección de puertos de ChromeOS/Linux para el servicio si corresponde.
-5. Caddy instalado en el entorno que recibe la conexión.
+1. A real domain, for example `mc.example.com`.
+2. The domain's DNS `A/AAAA` record pointing to the public server address.
+3. TCP 443 forwarded by the router to the server when self-hosting from home.
+4. ChromeOS/Linux port forwarding when required for the service inside Crostini.
+5. Caddy installed in the environment receiving the connection.
 
 ## Caddy
 
-Copia `Caddyfile.example` como `Caddyfile` y cambia `example.com` por tu dominio.
+Copy `Caddyfile.example` to `Caddyfile` and replace `example.com` with your domain.
 
-Caddy se encarga de obtener y renovar el certificado TLS automáticamente cuando el dominio es accesible públicamente.
+Caddy can obtain and renew a trusted TLS certificate automatically when the domain is publicly reachable and DNS is configured correctly.
 
-Arranca Caddy con tu `Caddyfile` y deja EaglerXServer escuchando en el puerto local configurado.
+Start Caddy with your `Caddyfile` and keep EaglerXServer listening on the configured local port.
 
-## Dirección del cliente
+## Client endpoint
 
-Con HTTPS/WSS, el jugador debe usar el endpoint seguro que corresponda a EaglerXServer/proxy, por ejemplo:
+With HTTPS/WSS, the player should use the secure endpoint that corresponds to the EaglerXServer/proxy configuration, for example:
 
 ```text
 wss://mc.example.com
 ```
 
-No uses `ws://` para el endpoint público HTTPS.
+Do not use `ws://` for a public endpoint that requires secure WebSockets.
 
 ## Chromebook
 
-ChromeOS sigue siendo el punto que puede impedir conexiones desde otros dispositivos. HTTPS no elimina la necesidad de configurar la red de ChromeOS y, si juegas desde Internet, el router.
+ChromeOS networking can still prevent connections from other devices. HTTPS does not remove the need to configure ChromeOS networking and, for Internet access, the router/firewall.
 
-Para una red local, configura la redirección de puertos de ChromeOS. Para Internet, configura además el router/firewall para TCP 443.
+For a local network, configure ChromeOS port forwarding as required. For Internet access, also configure TCP 443 on the router/firewall.
 
-## Importante sobre el puerto 25565
+## Important about port 25565
 
-No asumas que `wss://dominio:25565` es correcto. En esta arquitectura el cliente público entra por **443** y Caddy reenvía internamente a `127.0.0.1:25565`.
+Do not assume `wss://domain:25565` is correct. In this architecture, the public client connects through **443** and Caddy proxies internally to `127.0.0.1:25565`.
 
-## Seguridad
+## Security
 
-- No expongas directamente Paper en 25565 a Internet si el proxy puede evitarlo.
-- Mantén Caddy y el sistema actualizados.
-- Usa whitelist para un servidor privado.
-- No des OP innecesariamente.
-- El certificado TLS debe ser válido para el dominio.
+- Do not expose Paper directly on 25565 to the Internet when a suitable proxy can protect the public endpoint.
+- Keep Caddy and the operating system updated.
+- Use a whitelist for private servers.
+- Do not grant OP unnecessarily.
+- The TLS certificate must be valid for the domain.

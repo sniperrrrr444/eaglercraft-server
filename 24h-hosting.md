@@ -1,53 +1,53 @@
-# Servidor 24/7 desde una web de hosting
+# 24/7 Hosting Migration
 
-Si quieres que el servidor siga funcionando cuando el Chromebook esté apagado, necesitas ejecutar Paper + EaglerXServer en un servicio de hosting que permita procesos persistentes.
+If you want the server to keep running while the Chromebook is powered off, run Paper + EaglerXServer on a hosting service that allows persistent processes.
 
-## Qué debe soportar el hosting
+## Hosting requirements
 
-Antes de subir el servidor, comprueba que el servicio permite:
+Before uploading the server, check that the provider supports:
 
-- Java 17 o compatible.
+- Java 17 or compatible Java runtime.
 - Paper 1.12.2.
-- JARs/plugins personalizados.
+- Custom JARs/plugins.
 - EaglerXServer.
 - WebSockets.
-- HTTPS/WSS o un reverse proxy compatible.
-- Puerto/endpoint público para WSS.
-- Almacenamiento persistente para el mundo.
+- HTTPS/WSS or a compatible reverse proxy.
+- A public WSS endpoint/port.
+- Persistent world storage.
 
-**No todos los hostings gratuitos permiten estas cosas.** Que una web ofrezca Minecraft gratis no significa que Eaglercraft funcione allí.
+**Not every free Minecraft host supports these requirements.** A host advertising free Minecraft hosting does not automatically mean Eaglercraft will work there.
 
-## Migrar desde el Chromebook
+## Migrate from the Chromebook
 
-En el Chromebook puedes preparar una copia con:
+Create a backup on the Chromebook:
 
 ```bash
 ./backup.sh
 ```
 
-La copia debe contener el mundo y las configuraciones necesarias. No subas secretos, tokens ni certificados privados a GitHub.
+The backup should contain the world and required configuration. Never upload secrets, tokens or private certificates to GitHub.
 
-En el hosting:
+On the host:
 
-1. Instala Java 17.
-2. Sube `paper.jar` y el JAR compatible de EaglerXServer.
-3. Sube el mundo y `server.properties`.
-4. Sube los plugins que realmente uses.
-5. Configura el endpoint público HTTPS/WSS.
-6. Arranca Paper.
-7. Comprueba primero una conexión Eaglercraft.
-8. Comprueba después la voz/micrófono.
+1. Install/select Java 17.
+2. Upload `paper.jar` and the compatible EaglerXServer JAR.
+3. Upload the world and `server.properties`.
+4. Upload only the plugins you actually use.
+5. Configure the public HTTPS/WSS endpoint.
+6. Start Paper.
+7. Test an Eaglercraft connection first.
+8. Test voice/microphone separately.
 
-## Dominio
+## Domain
 
-Si el hosting proporciona un dominio/subdominio, úsalo como endpoint WSS, por ejemplo:
+If the host provides a domain/subdomain, use it as the WSS endpoint, for example:
 
 ```text
-wss://tu-servidor.ejemplo
+wss://your-server.example
 ```
 
-Si proporciona un dominio propio pero no permite WebSockets/WSS, **no será suficiente para Eaglercraft**.
+A custom domain without WebSocket/WSS support is **not enough for Eaglercraft**.
 
-## Importante
+## Important
 
-Este repositorio no recomienda un proveedor concreto como garantizado 24/7 porque los planes gratuitos, límites y políticas cambian. Comprueba siempre las condiciones actuales del proveedor y la compatibilidad con EaglerXServer antes de migrar.
+This repository does not claim that a particular free provider is guaranteed to work 24/7. Free plans, limits and policies change. Always verify the provider's current terms and EaglerXServer compatibility before migrating.
